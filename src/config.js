@@ -76,6 +76,13 @@ const configOptions = new Map([
       default: false,
       desc: 'Bypass initial account selection on startup'
     }
+  ],
+  [
+    'moreSubtitleLanguages',
+    {
+      default: true,
+      desc: 'Add missing subtitle auto-translate languages'
+    }
   ]
 ]);
 

@@ -26,6 +26,8 @@ import './watch.js';
 import './video-quality';
 import './lang-settings-fix';
 import './remove-endscreen';
+import './subtitle-languages';
+import './subtitle-transliterate';
 import './hooks';
 import './block-webos-cast';
 import './auto-account-select';
