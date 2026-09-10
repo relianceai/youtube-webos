@@ -90,3 +90,52 @@ rather than on upstream's code:
   (console: `[subtitle-transliterate] Converted captions to Latin script`)
 
 Use `corepack pnpm run inspect` to reach that console on the TV.
+
+## Troubleshooting: installs "succeed" but the app will not launch
+
+Symptom set seen on 2026-09-10:
+
+- `ares-install` reports `Success`
+- files land in `/media/developer/apps/usr/palm/applications/youtube.leanback.v4/`
+- `ares-install --list` and `ares-launch --running` are both **empty**
+- `ares-launch` prints `Launched application` but the TV shows a
+  "YouTube is not installed" dialog and nothing runs
+- `ares-inspect` warns `failed forwarding ... => devicePort: 9998`
+
+**Cause: the official YouTube app was installed.** This app deliberately reuses
+the app id `youtube.leanback.v4` so that casting from phones keeps working, so
+the two cannot coexist - the Content Store copy wins and the dev copy never
+registers with SAM. Uninstalling the official YouTube app through the TV UI and
+reinstalling this one fixes it immediately.
+
+This is the project's only stated requirement, in the README and on the repo
+listing: "BE SURE TO UNINSTALL THE OFFICIAL YOUTUBE TV APP BEFORE INSTALLING".
+
+Reading the diagnostics correctly matters here, because most of them mislead:
+
+| Command                 | Real Luna call                    | What it actually proves                                                       |
+| ----------------------- | --------------------------------- | ----------------------------------------------------------------------------- |
+| `ares-install <ipk>`    | `appInstallService/dev/install`   | Only reads an early `state`; "Success" can precede failure                    |
+| `ares-install --list`   | `applicationManager/dev/listApps` | Lists **dev apps only** - empty means nothing registered as a dev app         |
+| `ares-launch --running` | `applicationManager/dev/running`  | Dev apps only                                                                 |
+| `ares-launch <id>`      | `applicationManager/launch`       | Hits the **system** launcher, so its "success" says nothing about the dev app |
+
+Files being present on disk proves staging happened, not registration. `ps` over
+ssh proves nothing either: the Developer Mode ssh session is jailed and can see
+only its own ~8 processes. The reliable pair is `--list` plus `--running`.
+
+`ares-install --remove youtube.leanback.v4` only removes the **dev** copy. The
+Content Store copy has to go through the TV UI.
+
+## Developer Mode installs are temporary
+
+Developer Mode has a **1000 hour limit**; when it expires, apps installed this
+way are removed. An LG developer account is also bound to **one TV at a time** -
+signing it into another TV logs this one out, disables Developer Mode, and wipes
+dev apps. Switching LG accounts on the TV can therefore silently uninstall this
+app. Reinstalling is just the `ares-install` line above; no rebuild needed.
+
+Persisting across that would require the Homebrew Channel with root, which is
+patched on current firmware for essentially all webOS 5/6/7/9 models. Check
+https://cani.rootmy.tv/ before considering it. Root would not have prevented the
+app-id collision above.
